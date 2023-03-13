@@ -97,6 +97,11 @@ type Raft struct {
 	CommitIndex int // index of highest log entry known to be committed initial = 0 incerase monotonically
 	LastApplied int // index of highest log entry applied to state machine initial = 0 incerase monotonically
 
+	// snapshot
+	LastIncludedIndex int
+	LastIncludedTerm  int
+	SnapshotSeg       []byte
+
 	// volatile on leaders
 	NextIndex  []int //NextIndex[serverID] = nextTerm
 	MatchIndex []int
@@ -140,11 +145,7 @@ func (rf *Raft) persist() {
 		return
 	}
 	raftstate := w.Bytes()
-	rf.Persister.Save(raftstate, nil)
-
-	// states that should be persisted include
-	// currentTerm, votedFor, and rf.Log
-
+	rf.Persister.Save(raftstate, rf.SnapshotSeg)
 }
 
 // restore previously persisted state.
@@ -176,7 +177,40 @@ func (rf *Raft) readPersist(data []byte) {
 // that index. Raft should now trim its log as much as possible.
 func (rf *Raft) Snapshot(index int, snapshot []byte) {
 	// Your code here (2D).
+	baseIndex := rf.GetBaseIndex() // should be Last included index of snapshot
+	lastIndex, _ := rf.GetLastIndexAndTerm()
 
+	// if lastindex < baseIndex or input Index > LastIndex then we fucked up
+	if index > lastIndex || baseIndex > lastIndex {
+		fmt.Printf("you fucked up hard \n")
+		return
+	}
+
+	// modify log
+	termPos := index - baseIndex
+	rf.TruncateLog(index, rf.Log[termPos].Term)
+	// after truncating the term, assign fields
+	rf.SnapshotSeg = snapshot
+	rf.LastIncludedIndex = rf.Log[0].Index
+	rf.LastIncludedTerm = rf.Log[0].Term
+
+}
+
+func (rf *Raft) GetLastIndexAndTerm() (index int, term int) {
+	return rf.Log[len(rf.Log)-1].Index, rf.Log[len(rf.Log)-1].Term
+}
+
+func (rf *Raft) GetBaseIndex() int {
+	return rf.Log[0].Index
+}
+func (rf *Raft) TruncateLog(index int, term int) {
+	// helper function that snapshot calls
+	// truncates log through and including that index
+	logEntry := LogEntry{Command: "INIT", Index: index, Term: term}
+	newLog := []LogEntry{}
+	newLog = append(newLog, logEntry)
+	newLog = append(newLog, rf.Log[index+1:]...)
+	rf.Log = newLog
 }
 
 // example RequestVote RPC arguments structure.
@@ -227,8 +261,7 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 		// election restriction implementation
 		// only grants vote unless candidate log is more up to date than my own
 		// if logs have last entries with different terms, the log with later term is more up to date
-		lastLogIndex := len(rf.Log) - 1
-		lastLogTerm := rf.Log[lastLogIndex].Term
+		lastLogIndex, lastLogTerm := rf.GetLastIndexAndTerm()
 
 		if rf.CanGrantVote(args.LastLogTerm, args.LastLogIndex, lastLogIndex, lastLogTerm) {
 			reply.VoteGranted = true
@@ -284,44 +317,54 @@ func (rf *Raft) CallHeartBeat() {
 
 			// If last log index ≥ nextIndex for a follower: send
 			// AppendEntries RPC with log entries starting at nextIndex
-			input := rf.makeAppendEntriesArgs(server)
+			bol, input := rf.makeAppendEntriesArgs(server)
 			reply := AppendEntriesRPCReply{}
 
 			// fmt.Printf("%v is sending append entries to %v my nextIndex is %v and entries is %v \n", rf.Me, server, rf.NextIndex, input)
 			rf.Mu.Unlock()
+			if bol {
+				go rf.SendAppendEntries(server, &input, &reply) // TODO trigger aggrement to be sent to log
+			}
 
-			go rf.SendAppendEntries(server, &input, &reply) // TODO trigger aggrement to be sent to log
 		}
 
 	}
 }
 
-func (rf *Raft) makeAppendEntriesArgs(server int) AppendEntriesRPC {
+func (rf *Raft) makeAppendEntriesArgs(server int) (bool, AppendEntriesRPC) {
 	// helper function that fills in fields for appendEntries RPC all
-
+	// returns false if base index greater than nextIndex
 	// PrevLogIndex := rf.GetMax(rf.NextIndex[server]-1, 0)
 	PrevLogIndex := rf.GetMax(rf.NextIndex[server]-1, 0)
+	baseIndex := rf.GetBaseIndex()
+	lastLogIndex, _ := rf.GetLastIndexAndTerm()
+
+	if baseIndex > rf.NextIndex[server] {
+		return false, AppendEntriesRPC{}
+	}
 
 	// If last log index ≥ nextIndex for a follower: send
 	// AppendEntries RPC with log entries starting at nextIndex
 
 	appendEntriesMsg := AppendEntriesRPC{}
-
-	newEntries := make([]LogEntry, len(rf.Log[PrevLogIndex+1:])) // TODO check this logic
-
-	copy(newEntries, rf.Log[PrevLogIndex+1:])
-	// copy(newEntries, rf.Log[PrevLogIndex:]) // NEW CHANGE
-
-	appendEntriesMsg.Entries = newEntries
 	appendEntriesMsg.LeaderCommit = rf.CommitIndex
 	appendEntriesMsg.LeaderID = rf.Me
 	appendEntriesMsg.PrevLogIndex = PrevLogIndex
 	appendEntriesMsg.Term = rf.CurrentTerm
-	// if rf.NextIndex[server]-1 >= 0 {
-	// 	appendEntriesMsg.PrevLogTerm = rf.Log[PrevLogIndex].Term
-	// }
-	appendEntriesMsg.PrevLogTerm = rf.Log[PrevLogIndex].Term
-	return appendEntriesMsg
+
+	if appendEntriesMsg.PrevLogIndex >= baseIndex {
+		appendEntriesMsg.PrevLogTerm = rf.Log[appendEntriesMsg.PrevLogIndex-baseIndex].Term
+		// default is 0?
+	}
+	if lastLogIndex > rf.NextIndex[server] { // Check this logic in OH
+		entriesSeg := rf.Log[rf.NextIndex[server]-baseIndex:]
+		entries := make([]LogEntry, len(entriesSeg))
+		copy(entries, entriesSeg)
+		appendEntriesMsg.Entries = entries
+		// default is heartbeat, empty emtries
+	}
+
+	return true, appendEntriesMsg
 }
 
 // helper function that discovers inconsitencies in log entries
@@ -375,6 +418,8 @@ func (rf *Raft) AppendEntries(args *AppendEntriesRPC, reply *AppendEntriesRPCRep
 	reply.XTerm = -1
 	reply.XLen = -1
 
+	lastLogIndex, _ := rf.GetLastIndexAndTerm()
+
 	// 1. Reply false if term < currentTerm (§5.1)
 	if args.Term < rf.CurrentTerm {
 		// fmt.Printf("%v received expired request. My current term is %v, args term is %v \n", rf.Me, rf.CurrentTerm, args.Term)
@@ -382,27 +427,23 @@ func (rf *Raft) AppendEntries(args *AppendEntriesRPC, reply *AppendEntriesRPCRep
 		return
 	}
 
-	if args.PrevLogIndex > len(rf.Log)-1 {
+	if args.PrevLogIndex > lastLogIndex {
 		// If the previous log index is greater, then I immediately set the retry index to be the last index
 
-		reply.XLen = len(rf.Log) // TODO might get an off by 1 error
+		reply.XLen = lastLogIndex + 1 // TODO might get an off by 1 error
 		fmt.Printf("%v in case 1.5. Term: %v, xlen %v, xInd %v, xTerm %v, inconsistency %v \n", rf.Me, rf.CurrentTerm, reply.XLen, reply.XIndex, reply.XTerm, reply.Inconsistency)
 		return
 	}
 
-	// warning this might breakthings
-	// if args.Term != rf.CurrentTerm {
-	// 	return
-	// }
-
 	// 2. Reply false if log doesn’t contain an entry at prevLogIndex whose term matches prevLogTerm (§5.3)
-	// fmt.Printf("server %v 's log lengh is %v but args prevlogindex is %v\n ", rf.Me, rf.Log, args.PrevLogIndex)
+	// STEP THROUGH THIS IN OH
 	if args.PrevLogIndex >= 0 {
 		if rf.Log[args.PrevLogIndex].Term != args.PrevLogTerm {
 			reply.XTerm = rf.Log[args.PrevLogIndex].Term
 
 			// find the retry index
-			// for i := 0; i < args.PrevLogIndex+1; i++ {
+			// THIS SECTION's INDEX MIGHT BE FUCKED UP
+			// CHECK IN OH TOMORROW
 			for i := len(rf.Log) - 1; i >= 0; i-- {
 				// for i := 0; i < len(rf.Log); i++ {
 				if rf.Log[args.PrevLogIndex].Term == rf.Log[i].Term {
@@ -462,7 +503,7 @@ func (rf *Raft) AppendEntries(args *AppendEntriesRPC, reply *AppendEntriesRPCRep
 	// 5. If leaderCommit > commitIndex, set commitIndex =
 	// min(leaderCommit, index of last new entry)
 	if args.LeaderCommit > rf.CommitIndex {
-		rf.CommitIndex = rf.GetMin(args.LeaderCommit, len(rf.Log)-1)
+		rf.CommitIndex = rf.GetMin(args.LeaderCommit, lastLogIndex)
 	}
 
 	// fmt.Printf(" \n --- after Mod %v 's term: %v, args term: %v, current log %v, args entries %v, agrs prevIndex %v, args prevLogTerm %v, term at prevIndex %v --- \n",
@@ -553,7 +594,6 @@ func (rf *Raft) SendAppendEntries(server int, args *AppendEntriesRPC, reply *App
 
 				//   Case 1: leader doesn't have XTerm:
 				xTermFound := false
-				// for i := len(rf.Log) - 1; i >= 0; i-- {
 				for i := 0; i < len(rf.Log); i++ {
 					//   Case 2: leader has XTerm:
 					if reply.XTerm == rf.Log[i].Term {
@@ -577,12 +617,14 @@ func (rf *Raft) SendAppendEntries(server int, args *AppendEntriesRPC, reply *App
 
 			// • If AppendEntries fails because of log  inconsistency:
 			// decrement nextIndex and immediately retry (§5.3)
-			input := rf.makeAppendEntriesArgs(server)
+			bol, input := rf.makeAppendEntriesArgs(server)
 			reply := AppendEntriesRPCReply{}
 			rf.Mu.Unlock()
 
 			// fmt.Printf("%v is sending append entries again in else case to %v and input is %v \n", rf.Me, server, input)
-			rf.Peers[server].Call("Raft.AppendEntries", &input, &reply)
+			if bol {
+				rf.Peers[server].Call("Raft.AppendEntries", &input, &reply)
+			}
 		} else {
 			rf.Mu.Unlock()
 		}
@@ -594,21 +636,24 @@ func (rf *Raft) UpdateCommitIdx() {
 	// If there exists an N such that N > commitIndex, a majority
 	// of matchIndex[i] ≥ N, and log[N].term == currentTerm:
 	// set commitIndex = N (§5.3, §5.4).
+	baseIndex := rf.GetBaseIndex()
+	lastLogIndex, _ := rf.GetLastIndexAndTerm()
 	if rf.State == "leader" {
-		for N := rf.CommitIndex + 1; N < len(rf.Log); N++ {
-			count := 1
-			for server := range rf.Peers {
-				if server != rf.Me && rf.MatchIndex[server] >= N && rf.Log[N].Term == rf.CurrentTerm {
-					count += 1
+		for N := rf.CommitIndex + 1; N < lastLogIndex+1; N++ {
+			if rf.Log[N-baseIndex].Term == rf.CurrentTerm {
+				count := 1
+				for server := range rf.Peers {
+					if server != rf.Me && rf.MatchIndex[server] >= N && rf.Log[N].Term == rf.CurrentTerm {
+						count += 1
+					}
 				}
-			}
 
-			if count > len(rf.Peers)/2 {
-				rf.CommitIndex = N
+				if count > len(rf.Peers)/2 {
+					rf.CommitIndex = N
+				}
 			}
 		}
 	}
-
 }
 
 func (rf *Raft) UpdateTerms(newTerm int) {
@@ -677,12 +722,12 @@ func (rf *Raft) sendRequestVote(server int, args *RequestVoteArgs, reply *Reques
 		if rf.SumVotes > len(rf.Peers)/2 && args.Term <= rf.CurrentTerm && rf.State != "leader" {
 			fmt.Printf("I am the leader %v \n", rf.Me)
 			// populate nextIndex and matchIndex
-
+			lastLogIndex, _ := rf.GetLastIndexAndTerm()
 			rf.NextIndex = []int{}
 			rf.MatchIndex = []int{}
 			for i := 0; i < len(rf.Peers); i++ {
 				rf.MatchIndex = append(rf.MatchIndex, 0)
-				rf.NextIndex = append(rf.NextIndex, len(rf.Log))
+				rf.NextIndex = append(rf.NextIndex, lastLogIndex+1)
 			}
 
 			rf.State = "leader"
@@ -714,12 +759,12 @@ func (rf *Raft) sendLeaderElection(currentTerm int) {
 	}
 
 	rf.SumVotes = 1
+	lastLogIndex, lastLogTerm := rf.GetLastIndexAndTerm()
 	input := RequestVoteArgs{}
-
 	input.CandidateID = rf.Me
 	input.Term = rf.CurrentTerm
-	input.LastLogIndex = len(rf.Log) - 1
-	input.LastLogTerm = rf.Log[len(rf.Log)-1].Term
+	input.LastLogIndex = lastLogIndex
+	input.LastLogTerm = lastLogTerm
 	rf.Mu.Unlock()
 
 	for server := range rf.Peers {
@@ -770,10 +815,12 @@ func (rf *Raft) Start(command interface{}) (int, int, bool) {
 		for server := range rf.Peers {
 			if server != rf.Me {
 				rf.Mu.Lock()
-				args := rf.makeAppendEntriesArgs(server)
+				bol, args := rf.makeAppendEntriesArgs(server)
 				reply := AppendEntriesRPCReply{}
 				rf.Mu.Unlock()
-				go rf.SendAppendEntries(server, &args, &reply)
+				if bol {
+					go rf.SendAppendEntries(server, &args, &reply)
+				}
 			}
 		}
 
@@ -907,6 +954,10 @@ func Make(peers []*labrpc.ClientEnd, me int,
 	dummyEntry.Index = 0
 	dummyEntry.Term = 0
 	rf.Log = append(rf.Log, dummyEntry)
+
+	// snapShot
+	rf.LastIncludedIndex = -1
+	rf.LastIncludedTerm = -1
 
 	// initialize rf fields
 	rf.CommitIndex = 0
