@@ -145,7 +145,7 @@ func (rf *Raft) persist() {
 		return
 	}
 	raftstate := w.Bytes()
-	rf.Persister.Save(raftstate, rf.SnapshotSeg)
+	rf.Persister.Save(raftstate, rf.SnapshotSeg) // write the snapshot to persistant state
 }
 
 // restore previously persisted state.
@@ -177,22 +177,27 @@ func (rf *Raft) readPersist(data []byte) {
 // that index. Raft should now trim its log as much as possible.
 func (rf *Raft) Snapshot(index int, snapshot []byte) {
 	// Your code here (2D).
+	rf.Mu.Lock()
 	baseIndex := rf.GetBaseIndex() // should be Last included index of snapshot
 	lastIndex, _ := rf.GetLastIndexAndTerm()
 
 	// if lastindex < baseIndex or input Index > LastIndex then we fucked up
+	// this might not matter
 	if index > lastIndex || baseIndex > lastIndex {
 		fmt.Printf("you fucked up hard \n")
+		rf.Mu.Unlock()
 		return
 	}
 
 	// modify log
-	termPos := index - baseIndex
-	rf.TruncateLog(index, rf.Log[termPos].Term)
+	// termPos := index - baseIndex
+	fmt.Printf("\n %v get incoming snapshot request: index is %v, baseIndex is %v\n", rf.Me, index, baseIndex)
+	rf.TruncateLog(index)
 	// after truncating the term, assign fields
-	rf.SnapshotSeg = snapshot
+	rf.SnapshotSeg = snapshot // persister.readSnapshot() state of persister is same as long as I don't write to it again
 	rf.LastIncludedIndex = rf.Log[0].Index
 	rf.LastIncludedTerm = rf.Log[0].Term
+	rf.Mu.Unlock()
 
 }
 
@@ -203,13 +208,17 @@ func (rf *Raft) GetLastIndexAndTerm() (index int, term int) {
 func (rf *Raft) GetBaseIndex() int {
 	return rf.Log[0].Index
 }
-func (rf *Raft) TruncateLog(index int, term int) {
+func (rf *Raft) TruncateLog(index int) {
 	// helper function that snapshot calls
 	// truncates log through and including that index
-	logEntry := LogEntry{Command: "INIT", Index: index, Term: term}
+	fmt.Printf("%v's log getting truncated at index %v\n", rf.Me, index)
+	relPos := index - rf.GetBaseIndex()
+	logEntry := LogEntry{Command: "INIT", Index: index, Term: rf.Log[relPos].Term}
 	newLog := []LogEntry{}
 	newLog = append(newLog, logEntry)
-	newLog = append(newLog, rf.Log[index+1:]...)
+	fmt.Printf("%v's current log %v, index %v\n", rf.Me, rf.Log, index)
+	newLog = append(newLog, rf.Log[relPos+1:]...)
+	fmt.Printf("\n %v's LOG TRUNCATED! Old log %v, new log %v \n", rf.Me, rf.Log, newLog)
 	rf.Log = newLog
 }
 
@@ -339,6 +348,8 @@ func (rf *Raft) makeAppendEntriesArgs(server int) (bool, AppendEntriesRPC) {
 	baseIndex := rf.GetBaseIndex()
 	lastLogIndex, _ := rf.GetLastIndexAndTerm()
 
+	fmt.Printf("prevLogIdx %v basIndex %v lastLogIndex %v nextIndex %v. My Log is %v\n", PrevLogIndex, baseIndex, lastLogIndex, rf.NextIndex[server], rf.Log)
+
 	if baseIndex > rf.NextIndex[server] {
 		return false, AppendEntriesRPC{}
 	}
@@ -356,10 +367,11 @@ func (rf *Raft) makeAppendEntriesArgs(server int) (bool, AppendEntriesRPC) {
 		appendEntriesMsg.PrevLogTerm = rf.Log[appendEntriesMsg.PrevLogIndex-baseIndex].Term
 		// default is 0?
 	}
-	if lastLogIndex > rf.NextIndex[server] { // Check this logic in OH
+	if lastLogIndex >= rf.NextIndex[server] { // Check this logic in OH
 		entriesSeg := rf.Log[rf.NextIndex[server]-baseIndex:]
 		entries := make([]LogEntry, len(entriesSeg))
 		copy(entries, entriesSeg)
+		// fmt.Printf("This is entriesSeg %v, entries %v \n", entriesSeg, entries)
 		appendEntriesMsg.Entries = entries
 		// default is heartbeat, empty emtries
 	}
@@ -437,34 +449,32 @@ func (rf *Raft) AppendEntries(args *AppendEntriesRPC, reply *AppendEntriesRPCRep
 
 	// 2. Reply false if log doesn’t contain an entry at prevLogIndex whose term matches prevLogTerm (§5.3)
 	// STEP THROUGH THIS IN OH
-	if args.PrevLogIndex >= 0 {
-		if rf.Log[args.PrevLogIndex].Term != args.PrevLogTerm {
-			reply.XTerm = rf.Log[args.PrevLogIndex].Term
+	baseIndex := rf.GetBaseIndex()
+	if args.PrevLogIndex >= baseIndex && args.PrevLogTerm != rf.Log[args.PrevLogIndex-baseIndex].Term { // there might be off by 1
+		// if rf.Log[args.PrevLogIndex].Term != args.PrevLogTerm {
+		reply.XTerm = rf.Log[args.PrevLogIndex-baseIndex].Term
 
-			// find the retry index
-			// THIS SECTION's INDEX MIGHT BE FUCKED UP
-			// CHECK IN OH TOMORROW
-			for i := len(rf.Log) - 1; i >= 0; i-- {
-				// for i := 0; i < len(rf.Log); i++ {
-				if rf.Log[args.PrevLogIndex].Term == rf.Log[i].Term {
-					reply.XIndex = i
-					// break
-				}
+		// find the retry index
+		for i := len(rf.Log) - 1; i >= 0; i-- {
+			// for i := 0; i < len(rf.Log); i++ {
+			if rf.Log[args.PrevLogIndex-baseIndex].Term == rf.Log[i].Term {
+				reply.XIndex = rf.Log[i].Index // DOUBLE TRIPLE CHECK
+				// break
 			}
-
-			// print for debug
-			// fmt.Printf("%v 's RetryIndex is %v, RetryTerm is %v RetryLen is %v in line 390 \n", rf.Me, reply.XIndex, reply.XTerm, reply.XLen)
-
-			return
 		}
+
+		// print for debug
+		// fmt.Printf("%v 's RetryIndex is %v, RetryTerm is %v RetryLen is %v in line 390 \n", rf.Me, reply.XIndex, reply.XTerm, reply.XLen)
+
+		return
 	}
 
 	// 3. if existing entry conflicts with new one (same index but different terms)
 	// delete existing entry and all that follows it
 
-	if len(args.Entries) > 0 {
+	if args.PrevLogIndex >= baseIndex-1 {
 
-		entriesToLookAt := rf.Log[args.PrevLogIndex+1:]
+		entriesToLookAt := rf.Log[args.PrevLogIndex-baseIndex+1:]
 
 		iterLength := rf.GetMin(len(entriesToLookAt), len(args.Entries))
 
@@ -477,7 +487,7 @@ func (rf *Raft) AppendEntries(args *AppendEntriesRPC, reply *AppendEntriesRPCRep
 				// we want to clear the term inconsistency
 				// we want to keep the log until our starting index plus i
 				// fmt.Printf("%v: conflict found. log was %v \n", rf.Me, rf.Log)
-				rf.Log = rf.Log[:args.PrevLogIndex+i+1]
+				rf.Log = rf.Log[:args.PrevLogIndex-baseIndex+i+1]
 				rf.persist()
 				// conflictIndex = i
 				// fmt.Printf("%v: conflict found. log is now %v \n", rf.Me, rf.Log)
@@ -490,7 +500,7 @@ func (rf *Raft) AppendEntries(args *AppendEntriesRPC, reply *AppendEntriesRPCRep
 		// if conflict index is in my entries then i want to add everything after
 
 		for i := 0; i < len(args.Entries); i++ {
-			if len(rf.Log) == args.PrevLogIndex+i+1 {
+			if len(rf.Log) == args.PrevLogIndex-baseIndex+i+1 {
 				rf.Log = append(rf.Log, args.Entries[i])
 				rf.persist()
 			}
@@ -570,6 +580,7 @@ func (rf *Raft) SendAppendEntries(server int, args *AppendEntriesRPC, reply *App
 		// check for stale entries
 		if args.PrevLogIndex < rf.NextIndex[server]-1 {
 			rf.Mu.Unlock()
+			// fmt.Printf("returned in loc1 \n")
 			return
 		}
 
@@ -577,11 +588,16 @@ func (rf *Raft) SendAppendEntries(server int, args *AppendEntriesRPC, reply *App
 		// known to be replicated on server
 		// which means it is the length of the entries plus args' previndex
 
-		rf.MatchIndex[server] = len(args.Entries) + args.PrevLogIndex
 		// if tempMatch > rf.MatchIndex[server] {
 		// 	rf.MatchIndex[server] = tempMatch
 		// }
+		rf.MatchIndex[server] = len(args.Entries) + args.PrevLogIndex
 		rf.NextIndex[server] = rf.MatchIndex[server] + 1
+		fmt.Printf("server %v's MatchIndex: %v, NextIndex %v \n", server, rf.MatchIndex[server], rf.NextIndex[server])
+		// if len(args.Entries) > 0 {
+		// 	rf.NextIndex[server] = args.Entries[len(args.Entries)-1].Index + 1 // last index + 1
+		// 	rf.MatchIndex[server] = rf.NextIndex[server] - 1
+		// }
 		rf.UpdateCommitIdx()
 		rf.Mu.Unlock()
 
@@ -643,7 +659,7 @@ func (rf *Raft) UpdateCommitIdx() {
 			if rf.Log[N-baseIndex].Term == rf.CurrentTerm {
 				count := 1
 				for server := range rf.Peers {
-					if server != rf.Me && rf.MatchIndex[server] >= N && rf.Log[N].Term == rf.CurrentTerm {
+					if server != rf.Me && rf.MatchIndex[server] >= N {
 						count += 1
 					}
 				}
@@ -796,7 +812,8 @@ func (rf *Raft) Start(command interface{}) (int, int, bool) {
 	// defer rf.Mu.Unlock()
 
 	isLeader := rf.State == "leader"
-	index := len(rf.Log)
+	lastLogIndex, _ := rf.GetLastIndexAndTerm()
+	index := lastLogIndex + 1
 	term := rf.CurrentTerm
 
 	// append command to local log
@@ -808,7 +825,7 @@ func (rf *Raft) Start(command interface{}) (int, int, bool) {
 		newEntry.Term = term
 		rf.Log = append(rf.Log, newEntry)
 		rf.persist()
-		// fmt.Printf("Leader %v received new log entry %v and now log is %v\n", rf.Me, newEntry, rf.Log)
+		fmt.Printf("Leader %v received new log entry %v in term %v and now log is %v\n", rf.Me, newEntry, rf.CurrentTerm, rf.Log)
 
 		rf.Mu.Unlock()
 		// leader sends out appendEntries
@@ -816,9 +833,11 @@ func (rf *Raft) Start(command interface{}) (int, int, bool) {
 			if server != rf.Me {
 				rf.Mu.Lock()
 				bol, args := rf.makeAppendEntriesArgs(server)
+				fmt.Printf("leader %v sending append entries to %v can make is %v\n", rf.Me, server, bol)
 				reply := AppendEntriesRPCReply{}
 				rf.Mu.Unlock()
 				if bol {
+					fmt.Printf("leader %v sending append entries to %v entries %+v\n", rf.Me, server, args)
 					go rf.SendAppendEntries(server, &args, &reply)
 				}
 			}
@@ -868,22 +887,25 @@ func (rf *Raft) UpdateLog() {
 		time.Sleep(10 * time.Millisecond)
 		rf.Mu.Lock()
 
-		n := rf.CommitIndex - rf.LastApplied
+		// n := rf.CommitIndex - rf.LastApplied
+
 		// fmt.Printf("cmd = %v, app = %v, len = %v\n", rf.CommitIndex, rf.LastApplied, len(rf.Log))
-		for i := 0; i < n; i++ {
+		// for i := 0; i < n; i++ {
+		for i := rf.LastApplied + 1; i <= rf.CommitIndex; i++ {
 			rf.LastApplied++
-
-			// fmt.Printf("my %v last applied is %v and log is %v \n", rf.Me, rf.LastApplied, rf.Log)
-			// TODO relinquish lock before sending to channel
-			applyTerm := rf.Log[rf.LastApplied]
-
+			baseIndex := rf.GetBaseIndex()
+			fmt.Printf("%v is trying to apply in term %v. Base is %v, i is %v, log is %v\n", rf.Me, rf.CurrentTerm, baseIndex, i, rf.Log)
+			applyTerm := rf.Log[i-baseIndex]
 			applyMsg := ApplyMsg{}
 			applyMsg.CommandValid = true
 			applyMsg.Command = applyTerm.Command
-			applyMsg.CommandIndex = rf.LastApplied // double check
+			applyMsg.CommandIndex = i
+			// applyMsg.CommandIndex = rf.LastApplied // double check
 
 			fmt.Printf("\n %v is sending to channel %v at termv %v -------------- \n", rf.Me, applyMsg, rf.CurrentTerm)
+			rf.Mu.Unlock()
 			rf.ApplyCh <- applyMsg
+			rf.Mu.Lock()
 		}
 		rf.Mu.Unlock()
 	}
