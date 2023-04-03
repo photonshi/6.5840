@@ -1,13 +1,19 @@
 package kvraft
 
-import "6.5840/labrpc"
-import "crypto/rand"
-import "math/big"
+import (
+	"crypto/rand"
+	"fmt"
+	"math/big"
+	"sync"
 
+	"6.5840/labrpc"
+)
 
 type Clerk struct {
 	servers []*labrpc.ClientEnd
 	// You will have to modify this struct.
+	mu       sync.Mutex
+	clientId int64
 }
 
 func nrand() int64 {
@@ -19,8 +25,11 @@ func nrand() int64 {
 
 func MakeClerk(servers []*labrpc.ClientEnd) *Clerk {
 	ck := new(Clerk)
+	ck.mu.Lock()
 	ck.servers = servers
 	// You'll have to add code here.
+	ck.clientId = nrand()
+	ck.mu.Unlock()
 	return ck
 }
 
@@ -35,9 +44,24 @@ func MakeClerk(servers []*labrpc.ClientEnd) *Clerk {
 // must match the declared types of the RPC handler function's
 // arguments. and reply must be passed as a pointer.
 func (ck *Clerk) Get(key string) string {
-
 	// You will have to modify this function.
-	return ""
+	// Plan: iterate over all servers
+	// TODO: remember who is leader
+	for {
+		arg := GetArgs{}
+		arg.ClientID = ck.clientId
+		arg.Key = key
+		reply := GetReply{}
+		for _, server := range ck.servers {
+			ok := server.Call("KVServer.Get", &arg, &reply)
+			if ok && reply.Err != ErrWrongLeader {
+				// design: in server, if wrong leader, set Err = "wrongLeader"
+				// and if key does not exist, return '' as reply.Value in server
+				return reply.Value
+			}
+		}
+
+	}
 }
 
 // shared by Put and Append.
@@ -50,11 +74,32 @@ func (ck *Clerk) Get(key string) string {
 // arguments. and reply must be passed as a pointer.
 func (ck *Clerk) PutAppend(key string, value string, op string) {
 	// You will have to modify this function.
+	// same iteration logic as Get
+	// but here we just return
+	for {
+		arg := PutAppendArgs{}
+		arg.ClientID = ck.clientId
+		arg.Key = key
+		arg.Value = value
+		arg.Op = op // put or append
+		reply := PutAppendReply{}
+
+		// iterate through each server
+		for _, server := range ck.servers {
+			ok := server.Call("KVServer.PutAppend", &arg, &reply)
+			if ok && reply.Err != ErrWrongLeader {
+				// TODO think about what other errs we may encounter
+				return
+			}
+		}
+	}
 }
 
 func (ck *Clerk) Put(key string, value string) {
+	fmt.Printf("Client put value is %v \n", value)
 	ck.PutAppend(key, value, "Put")
 }
 func (ck *Clerk) Append(key string, value string) {
+	fmt.Printf("Client append value is %v \n", value)
 	ck.PutAppend(key, value, "Append")
 }
