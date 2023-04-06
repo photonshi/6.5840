@@ -12,8 +12,10 @@ import (
 type Clerk struct {
 	servers []*labrpc.ClientEnd
 	// You will have to modify this struct.
-	mu       sync.Mutex
-	clientId int64
+	mu         sync.Mutex
+	clientId   int64
+	requestNum int
+	leader     int
 }
 
 func nrand() int64 {
@@ -29,6 +31,8 @@ func MakeClerk(servers []*labrpc.ClientEnd) *Clerk {
 	ck.servers = servers
 	// You'll have to add code here.
 	ck.clientId = nrand()
+	ck.requestNum = 0 // initializes to 0
+	ck.leader = 0
 	ck.mu.Unlock()
 	return ck
 }
@@ -46,23 +50,30 @@ func MakeClerk(servers []*labrpc.ClientEnd) *Clerk {
 func (ck *Clerk) Get(key string) string {
 	// You will have to modify this function.
 	// Plan: iterate over all servers
-	// TODO: remember who is leader
-	for {
-		arg := GetArgs{}
-		arg.ClientID = ck.clientId
-		arg.Key = key
-		reply := GetReply{}
-		for _, server := range ck.servers {
-			ok := server.Call("KVServer.Get", &arg, &reply)
-			if ok && reply.Err != ErrWrongLeader {
-				// design: in server, if wrong leader, set Err = "wrongLeader"
-				// and if key does not exist, return '' as reply.Value in server
-				return reply.Value
-			}
-		}
 
+	arg := GetArgs{}
+	arg.ClientID = ck.clientId
+	arg.Key = key
+	arg.RequestNum = ck.requestNum
+	ck.requestNum += 1
+	reply := GetReply{}
+	for {
+		server := ck.servers[ck.leader]
+		ok := server.Call("KVServer.Get", &arg, &reply)
+		if ok && reply.Err == OK {
+			return reply.Value
+		}
+		if reply.Err == ErrNoKey {
+			return ""
+		} else {
+			ck.mu.Lock()
+			ck.leader = (ck.leader + 1) % len(ck.servers)
+			ck.mu.Unlock()
+		}
 	}
 }
+
+// }
 
 // shared by Put and Append.
 //
@@ -76,21 +87,27 @@ func (ck *Clerk) PutAppend(key string, value string, op string) {
 	// You will have to modify this function.
 	// same iteration logic as Get
 	// but here we just return
-	for {
-		arg := PutAppendArgs{}
-		arg.ClientID = ck.clientId
-		arg.Key = key
-		arg.Value = value
-		arg.Op = op // put or append
-		reply := PutAppendReply{}
 
-		// iterate through each server
-		for _, server := range ck.servers {
-			ok := server.Call("KVServer.PutAppend", &arg, &reply)
-			if ok && reply.Err != ErrWrongLeader {
-				// TODO think about what other errs we may encounter
-				return
-			}
+	arg := PutAppendArgs{}
+	arg.ClientID = ck.clientId
+	arg.Key = key
+	arg.Value = value
+	arg.Op = op // put or append
+	arg.RequestNum = ck.requestNum
+	ck.requestNum += 1
+	reply := PutAppendReply{}
+
+	// iterate through each server
+	for {
+		server := ck.servers[ck.leader]
+		ok := server.Call("KVServer.PutAppend", &arg, &reply)
+		if ok && reply.Err == OK {
+			return
+		} else {
+			// update leader
+			ck.mu.Lock()
+			ck.leader = (ck.leader + 1) % len(ck.servers)
+			ck.mu.Unlock()
 		}
 	}
 }
