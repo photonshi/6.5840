@@ -455,8 +455,9 @@ func (cfg *config) checkOneLeader() int {
 			return leaders[lastTermWithLeader][0]
 		}
 	}
-	cfg.t.Fatalf("expected one leader, got none")
-	return -1
+	panic("expected one leader, got none")
+	// cfg.t.Fatalf("expected one leader, got none")
+	// return -1
 }
 
 // check that everyone agrees on the term.

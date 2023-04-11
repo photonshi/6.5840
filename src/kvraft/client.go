@@ -2,7 +2,6 @@ package kvraft
 
 import (
 	"crypto/rand"
-	"fmt"
 	"math/big"
 	"sync"
 
@@ -113,10 +112,10 @@ func (ck *Clerk) PutAppend(key string, value string, op string) {
 }
 
 func (ck *Clerk) Put(key string, value string) {
-	fmt.Printf("Client put value is %v \n", value)
+	// fmt.Printf("Client put value is %v \n", value)
 	ck.PutAppend(key, value, "Put")
 }
 func (ck *Clerk) Append(key string, value string) {
-	fmt.Printf("Client append value is %v \n", value)
+	// fmt.Printf("Client append value is %v \n", value)
 	ck.PutAppend(key, value, "Append")
 }

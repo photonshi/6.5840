@@ -1,9 +1,12 @@
 package kvraft
 
 import (
+	"bytes"
+	"fmt"
 	"log"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"6.5840/labgob"
 	"6.5840/labrpc"
@@ -20,9 +23,9 @@ func DPrintf(format string, a ...interface{}) (n int, err error) {
 }
 
 type DupTableEntry struct {
-	Error     Err
-	Operation Op
-	ReqNum    int
+	Error  Err
+	Result string
+	ReqNum int
 }
 
 type Op struct {
@@ -53,6 +56,7 @@ type KVServer struct {
 	kvTable     map[string]string       // kv database
 	dupTable    map[int64]DupTableEntry // maps client ID to duptable entry for duplication and waiting
 	lastApplied int                     // index of last applied, set in ticker
+
 }
 
 func (kv *KVServer) stallAndCheck(op Op) bool {
@@ -108,7 +112,7 @@ func (kv *KVServer) Get(args *GetArgs, reply *GetReply) {
 	if kv.dupTable[args.ClientID].Error == OK {
 		// obtain get result from dup table
 		// to ensure it is linearlizable
-		reply.Value = kv.dupTable[args.ClientID].Operation.Value
+		reply.Value = kv.dupTable[args.ClientID].Result
 	}
 
 }
@@ -165,34 +169,92 @@ func (kv *KVServer) noDups(op Op) bool {
 	return true
 }
 
+func (kv *KVServer) decodeSnapshot(snapshot []byte) {
+	// helper function called by ticker, invoked when mst is a snapshot
+
+	if snapshot == nil {
+		fmt.Printf("no data in snapshot!\n")
+		return
+	}
+
+	r := bytes.NewBuffer(snapshot)
+	d := labgob.NewDecoder(r)
+	var kvTable map[string]string
+	var dupTable map[int64]DupTableEntry
+	var lastApplied int
+
+	// snapshot contains kvTable, dupTable, and lastSnapshot
+	if d.Decode(&kvTable) != nil ||
+		d.Decode(&dupTable) != nil ||
+		d.Decode(&lastApplied) != nil {
+		fmt.Printf("error in decoding snapshot \n")
+		return
+	} else {
+		kv.kvTable = kvTable
+		kv.dupTable = dupTable
+		kv.lastApplied = lastApplied
+	}
+}
+
+func (kv *KVServer) encodeSnapshot() []byte {
+	// helper function that encodes kvTable, dupTable, and lastSnapshotInd to snapshot
+	// called by ticker
+	w := new(bytes.Buffer)
+	e := labgob.NewEncoder(w)
+	e.Encode(kv.kvTable)
+	e.Encode(kv.dupTable)
+	e.Encode(kv.lastApplied)
+	return w.Bytes()
+}
+
 func (kv *KVServer) Ticker() {
 	for {
 		msg := <-kv.applyCh
-		op := msg.Command.(Op)
-
+		fmt.Printf("msg: %+v\n", msg)
+		// if msg is snapshot, apply snapshot with helper function
+		// if lastApplied - lastSnapshotInd > maxRaftstate, send snapshot
+		// Inside snapshot, contains everything in our database & duplicate table
 		kv.mu.Lock()
-
-		if kv.noDups(op) {
-			kv.handleOp(op)
-			dupEntry := DupTableEntry{}
-			dupEntry.ReqNum = op.RequestNum
-			dupEntry.Operation = op
-			dupEntry.Error = OK
-			if op.Command == "Get" {
-				_, ok := kv.kvTable[op.Key]
-				if !ok {
-					// if result for get is not in table, error is ErrNoKey
-					dupEntry.Error = ErrNoKey
-				} else {
-					dupEntry.Operation.Value = kv.kvTable[op.Key]
+		if msg.SnapshotValid {
+			// what should I do with lastIncludedTerm & lastIncludedIndex?
+			kv.decodeSnapshot(msg.Snapshot)
+		} else {
+			op := msg.Command.(Op)
+			if kv.noDups(op) {
+				kv.handleOp(op)
+				dupEntry := DupTableEntry{}
+				dupEntry.ReqNum = op.RequestNum
+				// dupEntry.Operation = op
+				dupEntry.Error = OK
+				if op.Command == "Get" {
+					_, ok := kv.kvTable[op.Key]
+					if !ok {
+						// if result for get is not in table, error is ErrNoKey
+						dupEntry.Error = ErrNoKey
+					} else {
+						dupEntry.Result = kv.kvTable[op.Key]
+					}
 				}
+				kv.dupTable[op.ClientID] = dupEntry
 			}
-			kv.dupTable[op.ClientID] = dupEntry
+			// set lastApplied regardless of dup or not
+			kv.lastApplied = msg.CommandIndex
 		}
-		// set lastApplied regardless of dup or not
-		kv.lastApplied = msg.CommandIndex
 		kv.mu.Unlock()
 	}
+}
+func (kv *KVServer) SnapTicker() {
+	for !kv.killed() {
+		time.Sleep(10 * time.Millisecond)
+		kv.mu.Lock()
+		if kv.maxraftstate >= 0 && kv.rf.Persister.RaftStateSize() >= kv.maxraftstate {
+			// call raft's snapshot
+			fmt.Printf("about to call Snapshot from server %d!\n", kv.me)
+			kv.rf.Snapshot(kv.lastApplied, kv.encodeSnapshot())
+		}
+		kv.mu.Unlock()
+	}
+
 }
 
 // servers[] contains the ports of the set of
@@ -226,6 +288,8 @@ func StartKVServer(servers []*labrpc.ClientEnd, me int, persister *raft.Persiste
 	kv.dupTable = make(map[int64]DupTableEntry)
 	kv.lastApplied = 0
 	kv.mu.Unlock()
+
 	go kv.Ticker()
+	go kv.SnapTicker()
 	return kv
 }
