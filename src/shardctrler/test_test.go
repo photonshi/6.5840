@@ -58,6 +58,7 @@ func check_same_config(t *testing.T, c1 Config, c2 Config) {
 		t.Fatalf("Num wrong")
 	}
 	if c1.Shards != c2.Shards {
+		fmt.Printf("c1: %+v\nc2 %+v\n", c1, c2)
 		t.Fatalf("Shards wrong")
 	}
 	if len(c1.Groups) != len(c2.Groups) {
@@ -89,6 +90,7 @@ func TestBasic(t *testing.T) {
 
 	cfa := make([]Config, 6)
 	cfa[0] = ck.Query(-1)
+	fmt.Printf("DONE WITH FIRST QUERY\n")
 
 	check(t, []int{}, ck)
 

@@ -45,11 +45,12 @@ func (ck *Clerk) Query(num int) Config {
 		ClientID:   ck.clientId,
 		RequestNum: ck.requestNum,
 	}
-	reply := QueryReply{}
 
 	ck.requestNum += 1
 
 	for {
+		reply := QueryReply{}
+
 		server := ck.servers[ck.leader]
 		ok := server.Call("ShardCtrler.Query", &arg, &reply)
 		if ok && reply.Err == OK && !reply.WrongLeader {
@@ -70,11 +71,11 @@ func (ck *Clerk) Join(servers map[int][]string) {
 		ClientID:   ck.clientId,
 		RequestNum: ck.requestNum,
 	}
-	reply := JoinReply{}
 
 	ck.requestNum += 1
 
 	for {
+		reply := JoinReply{}
 		server := ck.servers[ck.leader]
 		ok := server.Call("ShardCtrler.Join", &arg, &reply)
 		if ok && reply.Err == OK && !reply.WrongLeader {
@@ -94,9 +95,10 @@ func (ck *Clerk) Leave(gids []int) {
 		ClientID:   ck.clientId,
 		RequestNum: ck.requestNum,
 	}
-	reply := LeaveReply{}
+
 	ck.requestNum += 1
 	for {
+		reply := LeaveReply{}
 		server := ck.servers[ck.leader]
 		ok := server.Call("ShardCtrler.Leave", &arg, &reply)
 		if ok && reply.Err == OK && !reply.WrongLeader {
@@ -117,11 +119,11 @@ func (ck *Clerk) Move(shard int, gid int) {
 		ClientID:   ck.clientId,
 		RequestNum: ck.requestNum,
 	}
-	reply := MoveReply{}
 
 	ck.requestNum += 1
 
 	for {
+		reply := MoveReply{}
 		server := ck.servers[ck.leader]
 		ok := server.Call("ShardCtrler.Move", &arg, &reply)
 		if ok && reply.Err == OK && !reply.WrongLeader {
