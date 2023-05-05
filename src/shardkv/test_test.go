@@ -1,15 +1,18 @@
 package shardkv
 
-import "6.5840/porcupine"
-import "6.5840/models"
-import "testing"
-import "strconv"
-import "time"
-import "fmt"
-import "sync/atomic"
-import "sync"
-import "math/rand"
-import "io/ioutil"
+import (
+	"fmt"
+	"io/ioutil"
+	"math/rand"
+	"strconv"
+	"sync"
+	"sync/atomic"
+	"testing"
+	"time"
+
+	"6.5840/models"
+	"6.5840/porcupine"
+)
 
 const linearizabilityCheckTimeout = 1 * time.Second
 
@@ -48,6 +51,7 @@ func TestStaticShards(t *testing.T) {
 	// shutting down one shard and checking that some
 	// Get()s don't succeed.
 	cfg.ShutdownGroup(1)
+	fmt.Printf("CRASH HAPPENED!\n")
 	cfg.checklogs() // forbid snapshots
 
 	ch := make(chan string)
@@ -128,7 +132,10 @@ func TestJoinLeave(t *testing.T) {
 	for i := 0; i < n; i++ {
 		check(t, ck, ka[i], va[i])
 		x := randstring(5)
+		fmt.Printf("\n\n starting append %v \n\n", x)
 		ck.Append(ka[i], x)
+		fmt.Printf("\n\n finished append %v \n\n", x)
+
 		va[i] += x
 	}
 

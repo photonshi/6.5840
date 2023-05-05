@@ -1,0 +1,219 @@
+Test: unreliable 3...
+about to call Snapshot from server 0!
+about to call Snapshot from server 0!
+about to call Snapshot from server 0!
+about to call Snapshot from server 1!
+about to call Snapshot from server 2!
+about to call Snapshot from server 0!
+about to call Snapshot from server 0!
+about to call Snapshot from server 2!
+about to call Snapshot from server 2!
+about to call Snapshot from server 0!
+Command from channel is {ClientID:0 RequestNum:0 Command:Config Key: Value: Config:{Num:1 Shards:[100 100 100 100 100 100 100 100 100 100] Groups:map[100:[server-100-0 server-100-1 server-100-2]]}}
+ in apply ch ------------- 
+  2 in gid 100's kvtable is map[0:map[] 1:map[] 2:map[] 3:map[] 4:map[] 5:map[] 6:map[] 7:map[] 8:map[] 9:map[]]
+  2 in gid 100's current config: {Num:0 Shards:[0 0 0 0 0 0 0 0 0 0] Groups:map[]} 
+   2 in gid 100's dupmap is map[0:map[] 1:map[] 2:map[] 3:map[] 4:map[] 5:map[] 6:map[] 7:map[] 8:map[] 9:map[]]
+  2 in gid 100's incoming op is {ClientID:0 RequestNum:0 Command:Config Key: Value: Config:{Num:1 Shards:[100 100 100 100 100 100 100 100 100 100] Groups:map[100:[server-100-0 server-100-1 server-100-2]]}} 
+  2 in gid 100's shard is 0
+------------
+No dups, proceed!
+2 in gid 100 STARTING MIGRATION IN HANDLECONFIG! NEEDLIST IS []
+2 in gid 100 FINISHED MIGRATION!!!!!!
+ current Config: {Num:1 Shards:[100 100 100 100 100 100 100 100 100 100] Groups:map[100:[server-100-0 server-100-1 server-100-2]]} 
+ kvtable map[0:map[] 1:map[] 2:map[] 3:map[] 4:map[] 5:map[] 6:map[] 7:map[] 8:map[] 9:map[]]
+about to call Snapshot from server 1!
+about to call Snapshot from server 0!
+about to call Snapshot from server 2!
+Command from channel is {ClientID:0 RequestNum:0 Command:Config Key: Value: Config:{Num:1 Shards:[100 100 100 100 100 100 100 100 100 100] Groups:map[100:[server-100-0 server-100-1 server-100-2]]}}
+ in apply ch ------------- 
+  0 in gid 102's kvtable is map[0:map[] 1:map[] 2:map[] 3:map[] 4:map[] 5:map[] 6:map[] 7:map[] 8:map[] 9:map[]]
+  0 in gid 102's current config: {Num:0 Shards:[0 0 0 0 0 0 0 0 0 0] Groups:map[]} 
+   0 in gid 102's dupmap is map[0:map[] 1:map[] 2:map[] 3:map[] 4:map[] 5:map[] 6:map[] 7:map[] 8:map[] 9:map[]]
+  0 in gid 102's incoming op is {ClientID:0 RequestNum:0 Command:Config Key: Value: Config:{Num:1 Shards:[100 100 100 100 100 100 100 100 100 100] Groups:map[100:[server-100-0 server-100-1 server-100-2]]}} 
+  0 in gid 102's shard is 0
+------------
+No dups, proceed!
+0 in gid 102 STARTING MIGRATION IN HANDLECONFIG! NEEDLIST IS []
+0 in gid 102 FINISHED MIGRATION!!!!!!
+ current Config: {Num:1 Shards:[100 100 100 100 100 100 100 100 100 100] Groups:map[100:[server-100-0 server-100-1 server-100-2]]} 
+ kvtable map[0:map[] 1:map[] 2:map[] 3:map[] 4:map[] 5:map[] 6:map[] 7:map[] 8:map[] 9:map[]]
+about to call Snapshot from server 1!
+about to call Snapshot from server 0!
+about to call Snapshot from server 2!
+about to call Snapshot from server 0!
+about to call Snapshot from server 0!
+about to call Snapshot from server 2!
+about to call Snapshot from server 0!
+about to call Snapshot from server 2!
+about to call Snapshot from server 0!
+about to call Snapshot from server 1!
+about to call Snapshot from server 0!
+about to call Snapshot from server 2!
+about to call Snapshot from server 2!
+about to call Snapshot from server 1!
+about to call Snapshot from server 0!
+about to call Snapshot from server 0!
+about to call Snapshot from server 1!
+about to call Snapshot from server 2!
+about to call Snapshot from server 0!
+Command from channel is {ClientID:0 RequestNum:0 Command:Config Key: Value: Config:{Num:1 Shards:[100 100 100 100 100 100 100 100 100 100] Groups:map[100:[server-100-0 server-100-1 server-100-2]]}}
+ in apply ch ------------- 
+  0 in gid 100's kvtable is map[0:map[] 1:map[] 2:map[] 3:map[] 4:map[] 5:map[] 6:map[] 7:map[] 8:map[] 9:map[]]
+  0 in gid 100's current config: {Num:0 Shards:[0 0 0 0 0 0 0 0 0 0] Groups:map[]} 
+   0 in gid 100's dupmap is map[0:map[] 1:map[] 2:map[] 3:map[] 4:map[] 5:map[] 6:map[] 7:map[] 8:map[] 9:map[]]
+  0 in gid 100's incoming op is {ClientID:0 RequestNum:0 Command:Config Key: Value: Config:{Num:1 Shards:[100 100 100 100 100 100 100 100 100 100] Groups:map[100:[server-100-0 server-100-1 server-100-2]]}} 
+  0 in gid 100's shard is 0
+------------
+No dups, proceed!
+0 in gid 100 STARTING MIGRATION IN HANDLECONFIG! NEEDLIST IS []
+0 in gid 100 FINISHED MIGRATION!!!!!!
+ current Config: {Num:1 Shards:[100 100 100 100 100 100 100 100 100 100] Groups:map[100:[server-100-0 server-100-1 server-100-2]]} 
+ kvtable map[0:map[] 1:map[] 2:map[] 3:map[] 4:map[] 5:map[] 6:map[] 7:map[] 8:map[] 9:map[]]
+about to call Snapshot from server 2!
+about to call Snapshot from server 0!
+about to call Snapshot from server 2!
+about to call Snapshot from server 1!
+Command from channel is {ClientID:0 RequestNum:0 Command:Config Key: Value: Config:{Num:1 Shards:[100 100 100 100 100 100 100 100 100 100] Groups:map[100:[server-100-0 server-100-1 server-100-2]]}}
+ in apply ch ------------- 
+  1 in gid 102's kvtable is map[0:map[] 1:map[] 2:map[] 3:map[] 4:map[] 5:map[] 6:map[] 7:map[] 8:map[] 9:map[]]
+  1 in gid 102's current config: {Num:0 Shards:[0 0 0 0 0 0 0 0 0 0] Groups:map[]} 
+   1 in gid 102's dupmap is map[0:map[] 1:map[] 2:map[] 3:map[] 4:map[] 5:map[] 6:map[] 7:map[] 8:map[] 9:map[]]
+  1 in gid 102's incoming op is {ClientID:0 RequestNum:0 Command:Config Key: Value: Config:{Num:1 Shards:[100 100 100 100 100 100 100 100 100 100] Groups:map[100:[server-100-0 server-100-1 server-100-2]]}} 
+  1 in gid 102's shard is 0
+------------
+No dups, proceed!
+1 in gid 102 STARTING MIGRATION IN HANDLECONFIG! NEEDLIST IS []
+1 in gid 102 FINISHED MIGRATION!!!!!!
+ current Config: {Num:1 Shards:[100 100 100 100 100 100 100 100 100 100] Groups:map[100:[server-100-0 server-100-1 server-100-2]]} 
+ kvtable map[0:map[] 1:map[] 2:map[] 3:map[] 4:map[] 5:map[] 6:map[] 7:map[] 8:map[] 9:map[]]
+about to call Snapshot from server 2!
+about to call Snapshot from server 0!
+about to call Snapshot from server 1!
+about to call Snapshot from server 2!
+about to call Snapshot from server 1!
+about to call Snapshot from server 2!
+about to call Snapshot from server 0!
+about to call Snapshot from server 2!
+about to call Snapshot from server 0!
+about to call Snapshot from server 1!
+Command from channel is {ClientID:0 RequestNum:0 Command:Config Key: Value: Config:{Num:1 Shards:[100 100 100 100 100 100 100 100 100 100] Groups:map[100:[server-100-0 server-100-1 server-100-2]]}}
+ in apply ch ------------- 
+  1 in gid 100's kvtable is map[0:map[] 1:map[] 2:map[] 3:map[] 4:map[] 5:map[] 6:map[] 7:map[] 8:map[] 9:map[]]
+  1 in gid 100's current config: {Num:0 Shards:[0 0 0 0 0 0 0 0 0 0] Groups:map[]} 
+   1 in gid 100's dupmap is map[0:map[] 1:map[] 2:map[] 3:map[] 4:map[] 5:map[] 6:map[] 7:map[] 8:map[] 9:map[]]
+  1 in gid 100's incoming op is {ClientID:0 RequestNum:0 Command:Config Key: Value: Config:{Num:1 Shards:[100 100 100 100 100 100 100 100 100 100] Groups:map[100:[server-100-0 server-100-1 server-100-2]]}} 
+  1 in gid 100's shard is 0
+------------
+No dups, proceed!
+1 in gid 100 STARTING MIGRATION IN HANDLECONFIG! NEEDLIST IS []
+1 in gid 100 FINISHED MIGRATION!!!!!!
+ current Config: {Num:1 Shards:[100 100 100 100 100 100 100 100 100 100] Groups:map[100:[server-100-0 server-100-1 server-100-2]]} 
+ kvtable map[0:map[] 1:map[] 2:map[] 3:map[] 4:map[] 5:map[] 6:map[] 7:map[] 8:map[] 9:map[]]
+about to call Snapshot from server 1!
+about to call Snapshot from server 0!
+about to call Snapshot from server 1!
+about to call Snapshot from server 2!
+about to call Snapshot from server 2!
+about to call Snapshot from server 1!
+about to call Snapshot from server 0!
+about to call Snapshot from server 1!
+about to call Snapshot from server 1!
+Command from channel is {ClientID:4339739805347951408 RequestNum:0 Command:Put Key:0 Value:LjalT Config:{Num:0 Shards:[0 0 0 0 0 0 0 0 0 0] Groups:map[]}}
+ in apply ch ------------- 
+  1 in gid 100's kvtable is map[0:map[] 1:map[] 2:map[] 3:map[] 4:map[] 5:map[] 6:map[] 7:map[] 8:map[] 9:map[]]
+  1 in gid 100's current config: {Num:1 Shards:[100 100 100 100 100 100 100 100 100 100] Groups:map[100:[server-100-0 server-100-1 server-100-2]]} 
+   1 in gid 100's dupmap is map[0:map[0:{Result: ReqNum:0 Error:OK}] 1:map[] 2:map[] 3:map[] 4:map[] 5:map[] 6:map[] 7:map[] 8:map[] 9:map[]]
+  1 in gid 100's incoming op is {ClientID:4339739805347951408 RequestNum:0 Command:Put Key:0 Value:LjalT Config:{Num:0 Shards:[0 0 0 0 0 0 0 0 0 0] Groups:map[]}} 
+  1 in gid 100's shard is 8
+------------
+No dups, proceed!
+THIS SHARD IS MINE!
+1 in gid 100 's kvtable after handle op: map[0:map[] 1:map[] 2:map[] 3:map[] 4:map[] 5:map[] 6:map[] 7:map[] 8:map[0:LjalT] 9:map[]]
+about to call Snapshot from server 2!
+Command from channel is {ClientID:4339739805347951408 RequestNum:0 Command:Put Key:0 Value:LjalT Config:{Num:0 Shards:[0 0 0 0 0 0 0 0 0 0] Groups:map[]}}
+ in apply ch ------------- 
+  2 in gid 100's kvtable is map[0:map[] 1:map[] 2:map[] 3:map[] 4:map[] 5:map[] 6:map[] 7:map[] 8:map[] 9:map[]]
+  2 in gid 100's current config: {Num:1 Shards:[100 100 100 100 100 100 100 100 100 100] Groups:map[100:[server-100-0 server-100-1 server-100-2]]} 
+   2 in gid 100's dupmap is map[0:map[0:{Result: ReqNum:0 Error:OK}] 1:map[] 2:map[] 3:map[] 4:map[] 5:map[] 6:map[] 7:map[] 8:map[] 9:map[]]
+  2 in gid 100's incoming op is {ClientID:4339739805347951408 RequestNum:0 Command:Put Key:0 Value:LjalT Config:{Num:0 Shards:[0 0 0 0 0 0 0 0 0 0] Groups:map[]}} 
+  2 in gid 100's shard is 8
+------------
+No dups, proceed!
+THIS SHARD IS MINE!
+2 in gid 100 's kvtable after handle op: map[0:map[] 1:map[] 2:map[] 3:map[] 4:map[] 5:map[] 6:map[] 7:map[] 8:map[0:LjalT] 9:map[]]
+about to call Snapshot from server 2!
+about to call Snapshot from server 1!
+about to call Snapshot from server 0!
+about to call Snapshot from server 1!
+about to call Snapshot from server 0!
+about to call Snapshot from server 1!
+about to call Snapshot from server 0!
+about to call Snapshot from server 1!
+Command from channel is {ClientID:4339739805347951408 RequestNum:0 Command:Put Key:0 Value:LjalT Config:{Num:0 Shards:[0 0 0 0 0 0 0 0 0 0] Groups:map[]}}
+about to call Snapshot from server 2!
+ in apply ch ------------- 
+  0 in gid 100's kvtable is map[0:map[] 1:map[] 2:map[] 3:map[] 4:map[] 5:map[] 6:map[] 7:map[] 8:map[] 9:map[]]
+  0 in gid 100's current config: {Num:1 Shards:[100 100 100 100 100 100 100 100 100 100] Groups:map[100:[server-100-0 server-100-1 server-100-2]]} 
+   0 in gid 100's dupmap is map[0:map[0:{Result: ReqNum:0 Error:OK}] 1:map[] 2:map[] 3:map[] 4:map[] 5:map[] 6:map[] 7:map[] 8:map[] 9:map[]]
+  0 in gid 100's incoming op is {ClientID:4339739805347951408 RequestNum:0 Command:Put Key:0 Value:LjalT Config:{Num:0 Shards:[0 0 0 0 0 0 0 0 0 0] Groups:map[]}} 
+  0 in gid 100's shard is 8
+------------
+No dups, proceed!
+THIS SHARD IS MINE!
+0 in gid 100 's kvtable after handle op: map[0:map[] 1:map[] 2:map[] 3:map[] 4:map[] 5:map[] 6:map[] 7:map[] 8:map[0:LjalT] 9:map[]]
+about to call Snapshot from server 0!
+about to call Snapshot from server 1!
+about to call Snapshot from server 2!
+Command from channel is {ClientID:4339739805347951408 RequestNum:1 Command:Put Key:1 Value:XaRmn Config:{Num:0 Shards:[0 0 0 0 0 0 0 0 0 0] Groups:map[]}}
+ in apply ch ------------- 
+  2 in gid 100's kvtable is map[0:map[] 1:map[] 2:map[] 3:map[] 4:map[] 5:map[] 6:map[] 7:map[] 8:map[0:LjalT] 9:map[]]
+  2 in gid 100's current config: {Num:1 Shards:[100 100 100 100 100 100 100 100 100 100] Groups:map[100:[server-100-0 server-100-1 server-100-2]]} 
+   2 in gid 100's dupmap is map[0:map[0:{Result: ReqNum:0 Error:OK}] 1:map[] 2:map[] 3:map[] 4:map[] 5:map[] 6:map[] 7:map[] 8:map[4339739805347951408:{Result: ReqNum:0 Error:OK}] 9:map[]]
+  2 in gid 100's incoming op is {ClientID:4339739805347951408 RequestNum:1 Command:Put Key:1 Value:XaRmn Config:{Num:0 Shards:[0 0 0 0 0 0 0 0 0 0] Groups:map[]}} 
+  2 in gid 100's shard is 9
+------------
+No dups, proceed!
+THIS SHARD IS MINE!
+2 in gid 100 's kvtable after handle op: map[0:map[] 1:map[] 2:map[] 3:map[] 4:map[] 5:map[] 6:map[] 7:map[] 8:map[0:LjalT] 9:map[1:XaRmn]]
+about to call Snapshot from server 0!
+about to call Snapshot from server 0!
+about to call Snapshot from server 1!
+Command from channel is {ClientID:4339739805347951408 RequestNum:1 Command:Put Key:1 Value:XaRmn Config:{Num:0 Shards:[0 0 0 0 0 0 0 0 0 0] Groups:map[]}}
+ in apply ch ------------- 
+  1 in gid 100's kvtable is map[0:map[] 1:map[] 2:map[] 3:map[] 4:map[] 5:map[] 6:map[] 7:map[] 8:map[0:LjalT] 9:map[]]
+  1 in gid 100's current config: {Num:1 Shards:[100 100 100 100 100 100 100 100 100 100] Groups:map[100:[server-100-0 server-100-1 server-100-2]]} 
+   1 in gid 100's dupmap is map[0:map[0:{Result: ReqNum:0 Error:OK}] 1:map[] 2:map[] 3:map[] 4:map[] 5:map[] 6:map[] 7:map[] 8:map[4339739805347951408:{Result: ReqNum:0 Error:OK}] 9:map[]]
+  1 in gid 100's incoming op is {ClientID:4339739805347951408 RequestNum:1 Command:Put Key:1 Value:XaRmn Config:{Num:0 Shards:[0 0 0 0 0 0 0 0 0 0] Groups:map[]}} 
+  1 in gid 100's shard is 9
+------------
+No dups, proceed!
+THIS SHARD IS MINE!
+1 in gid 100 's kvtable after handle op: map[0:map[] 1:map[] 2:map[] 3:map[] 4:map[] 5:map[] 6:map[] 7:map[] 8:map[0:LjalT] 9:map[1:XaRmn]]
+about to call Snapshot from server 1!
+about to call Snapshot from server 0!
+Command from channel is {ClientID:4339739805347951408 RequestNum:1 Command:Put Key:1 Value:XaRmn Config:{Num:0 Shards:[0 0 0 0 0 0 0 0 0 0] Groups:map[]}}
+ in apply ch ------------- 
+  0 in gid 100's kvtable is map[0:map[] 1:map[] 2:map[] 3:map[] 4:map[] 5:map[] 6:map[] 7:map[] 8:map[0:LjalT] 9:map[]]
+  0 in gid 100's current config: {Num:1 Shards:[100 100 100 100 100 100 100 100 100 100] Groups:map[100:[server-100-0 server-100-1 server-100-2]]} 
+   0 in gid 100's dupmap is map[0:map[0:{Result: ReqNum:0 Error:OK}] 1:map[] 2:map[] 3:map[] 4:map[] 5:map[] 6:map[] 7:map[] 8:map[4339739805347951408:{Result: ReqNum:0 Error:OK}] 9:map[]]
+  0 in gid 100's incoming op is {ClientID:4339739805347951408 RequestNum:1 Command:Put Key:1 Value:XaRmn Config:{Num:0 Shards:[0 0 0 0 0 0 0 0 0 0] Groups:map[]}} 
+  0 in gid 100's shard is 9
+------------
+No dups, proceed!
+THIS SHARD IS MINE!
+0 in gid 100 's kvtable after handle op: map[0:map[] 1:map[] 2:map[] 3:map[] 4:map[] 5:map[] 6:map[] 7:map[] 8:map[0:LjalT] 9:map[1:XaRmn]]
+about to call Snapshot from server 0!
+about to call Snapshot from server 0!
+about to call Snapshot from server 1!
+about to call Snapshot from server 2!
+Command from channel is INIT
+panic: interface conversion: interface {} is string, not shardkv.Op
+
+goroutine 59 [running]:
+6.5840/shardkv.(*ShardKV).ApplyChTicker(0xc000178c60)
+	/Users/phoebeshi/Documents/2022-2023/spring2023/6.5840 gen/6.5840_copy/src/shardkv/server.go:426 +0xbfb
+created by 6.5840/shardkv.StartServer
+	/Users/phoebeshi/Documents/2022-2023/spring2023/6.5840 gen/6.5840_copy/src/shardkv/server.go:578 +0x42a
+exit status 2
+FAIL	6.5840/shardkv	3.105s
